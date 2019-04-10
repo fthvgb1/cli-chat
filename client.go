@@ -1,13 +1,13 @@
 package main
 
 import (
-	"flag"
-	"net/url"
-	"github.com/gorilla/websocket"
-	"fmt"
 	"bufio"
-	"os"
 	"encoding/json"
+	"flag"
+	"fmt"
+	"github.com/gorilla/websocket"
+	"net/url"
+	"os"
 )
 
 type msg struct {

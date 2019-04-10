@@ -1,11 +1,11 @@
 package main
 
 import (
-	"github.com/gorilla/websocket"
 	"encoding/json"
-	"net/http"
-	"github.com/satori/go.uuid"
 	"fmt"
+	"github.com/gorilla/websocket"
+	uuid "github.com/satori/go.uuid"
+	"net/http"
 )
 
 type ClientManager struct {
@@ -46,7 +46,7 @@ func (manager *ClientManager) send(message []byte, ignore *client) {
 相当于为每个client创建了一个事件
 一旦可以从client.send获取数据，就可以向
 该client发送信息
- */
+*/
 func (c *client) write() {
 	defer func() {
 		c.socket.Close()
@@ -88,6 +88,7 @@ func (manager *ClientManager) start() {
 		case conn := <-manager.register:
 			manager.clients[conn] = true
 			jsonMessage, _ := json.Marshal(&Message{Content: "一个新客户端接入"})
+			fmt.Println("一个新客户端接入")
 			manager.send(jsonMessage, conn)
 		case conn := <-manager.unregister:
 			if _, ok := manager.clients[conn]; ok {
