@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
 	"net/http"
+	"os"
 )
 
 type ClientManager struct {
@@ -83,13 +85,16 @@ func (c *client) read() {
 }
 
 func (manager *ClientManager) start() {
+	//捕捉通道的通信
 	for {
 		select {
+		//捕获是新链接
 		case conn := <-manager.register:
 			manager.clients[conn] = true
 			jsonMessage, _ := json.Marshal(&Message{Content: "一个新客户端接入"})
 			fmt.Println("一个新客户端接入")
 			manager.send(jsonMessage, conn)
+		//捕获的是链接下线
 		case conn := <-manager.unregister:
 			if _, ok := manager.clients[conn]; ok {
 				close(conn.send)
@@ -97,6 +102,7 @@ func (manager *ClientManager) start() {
 				jsonMessage, _ := json.Marshal(&Message{Content: "一个新客户端下线了"})
 				manager.send(jsonMessage, conn)
 			}
+		//捕获的是用户发送了消息
 		case message := <-manager.broadcast:
 			for conn := range manager.clients {
 				select {
@@ -120,6 +126,7 @@ func main() {
 }
 
 func wsPage(res http.ResponseWriter, r *http.Request) {
+	//第一个新接入的客户端都执行如下流程
 	conn, err := (&websocket.Upgrader{CheckOrigin: func(r *http.Request) bool {
 		return true
 	}}).Upgrade(res, r, nil)
@@ -132,11 +139,23 @@ func wsPage(res http.ResponseWriter, r *http.Request) {
 		http.NotFound(res, r)
 		return
 	}
+	//链接升级为websocket成功
 	uid := fmt.Sprintf("%s", id)
+	//创建一个client的结构体，将链接保存在这个结构体中
 	client := &client{id: uid, socket: conn, send: make(chan []byte)}
 	info, _ := json.Marshal(Message{Sender: uid})
 	conn.WriteMessage(websocket.TextMessage, []byte(info))
 	manager.register <- client
+	//为每个链接都创建一个接收消息和推送消息的协程(事件)
 	go client.read()
 	go client.write()
+	go func() {
+		for {
+			reader := bufio.NewReader(os.Stdin)
+			message, _ := reader.ReadBytes('\n')
+			jsonMessage, _ := json.Marshal(&Message{Sender: "管理员", Content: string(message)})
+			manager.broadcast <- jsonMessage
+
+		}
+	}()
 }
