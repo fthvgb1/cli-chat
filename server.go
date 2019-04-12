@@ -126,7 +126,7 @@ func main() {
 }
 
 func wsPage(res http.ResponseWriter, r *http.Request) {
-	//第一个新接入的客户端都执行如下流程
+	//每一个新接入的客户端都执行如下流程
 	conn, err := (&websocket.Upgrader{CheckOrigin: func(r *http.Request) bool {
 		return true
 	}}).Upgrade(res, r, nil)
