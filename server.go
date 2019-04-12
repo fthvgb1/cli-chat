@@ -51,16 +51,16 @@ func (manager *ClientManager) send(message []byte, ignore *client) {
 */
 func (c *client) write() {
 	defer func() {
-		c.socket.Close()
+		_ = c.socket.Close()
 	}()
 	for {
 		select {
 		case msg, ok := <-c.send:
 			if !ok {
-				c.socket.WriteMessage(websocket.CloseMessage, []byte{})
+				_ = c.socket.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			c.socket.WriteMessage(websocket.TextMessage, msg)
+			_ = c.socket.WriteMessage(websocket.TextMessage, msg)
 		}
 	}
 }
@@ -70,13 +70,13 @@ func (c *client) write() {
 func (c *client) read() {
 	defer func() {
 		manager.unregister <- c
-		c.socket.Close()
+		_ = c.socket.Close()
 	}()
 	for {
 		_, message, err := c.socket.ReadMessage()
 		if err != nil {
 			manager.unregister <- c
-			c.socket.Close()
+			_ = c.socket.Close()
 			break
 		}
 		jsonMessage, _ := json.Marshal(&Message{Sender: c.id, Content: string(message)})
@@ -122,7 +122,7 @@ func (manager *ClientManager) start() {
 func main() {
 	go manager.start()
 	http.HandleFunc("/", wsPage)
-	http.ListenAndServe(":9988", nil)
+	_ = http.ListenAndServe(":9988", nil)
 }
 
 func wsPage(res http.ResponseWriter, r *http.Request) {
@@ -144,7 +144,7 @@ func wsPage(res http.ResponseWriter, r *http.Request) {
 	//创建一个client的结构体，将链接保存在这个结构体中
 	client := &client{id: uid, socket: conn, send: make(chan []byte)}
 	info, _ := json.Marshal(Message{Sender: uid})
-	conn.WriteMessage(websocket.TextMessage, []byte(info))
+	_ = conn.WriteMessage(websocket.TextMessage, []byte(info))
 	manager.register <- client
 	//为每个链接都创建一个接收消息和推送消息的协程(事件)
 	go client.read()
